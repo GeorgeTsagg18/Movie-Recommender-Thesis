@@ -1,0 +1,11 @@
+# Εικονικό περιβάλλον (Python Virtual Environment)
+venv/
+
+# Το dataset με τις χιλιάδες εικόνες
+fer2013/
+
+# Αρχεία Cache της Python και του συστήματος
+__pycache__/
+*.pyc
+.DS_Store
+.vscode/
