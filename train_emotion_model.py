@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import tensorflow as tf
+from tensorflow import keras
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout
 from tensorflow.keras.utils import to_categorical
@@ -31,53 +32,97 @@ test_ds = tf.keras.utils.image_dataset_from_directory(
     label_mode='categorical'
 )
 
-# 2. Βελτιστοποίηση και κανονικοποίηση (Normalization)
-# Διαιρούμε τις τιμές των pixels με το 255 για να παμε στο [0,1]
-normalization_layer = layers.Rescaling(1./255)
-
-# Εφαρμόζουμε κανονικοποίηση στα datasets
-train_ds = train_ds.map(lambda x, y: (normalization_layer(x), y))
-test_ds = test_ds.map(lambda x, y: (normalization_layer(x), y))
-
-# 3. Χτίσιμο του CNN
-model = models.Sequential([
-    layers.Input(shape=(48, 48, 1)),
-    # 1o στρώμα φίλτρων
-    layers.Conv2D(32, (3, 3), activation='relu'),
-    layers.MaxPooling2D((2, 2)),
-    layers.Dropout(0.25),
-
-    # 2o στρώμα φίλτρων
-    layers.Conv2D(64, (3, 3), activation='relu'),
-    layers.MaxPooling2D((2, 2)),
-    layers.Dropout(0.25),
-
-    # 3o στρώμα φίλτρων
-    layers.Conv2D(128, (3, 3), activation='relu'),
-    layers.MaxPooling2D((2, 2)),
-    layers.Dropout(0.25),
-
-    # Τελικό στάδιο απόφασης
-    layers.Flatten(),
-    layers.Dense(128, activation='relu'),
-    layers.Dropout(0.5),
-    layers.Dense(7, activation='softmax') # 7 συναισθήματα
+# 2. Data augmentation
+data_augmentation = keras.Sequential([
+    layers.RandomFlip("horizontal"), # καθέφτρισμα εικόνας
+    layers.RandomRotation(0.1), # περιστροφή εικόνας έως 10% δεξιά ή αριστερά
+    layers.RandomZoom(0.1), # zoom in / zoom out έως 10%
 ])
 
-# 4. Μεταγλώττιση και εκπαίδευση
+# 3. Χτίσιμο του custom CNN (4 conv blocks)
+model = keras.Sequential([
+    # Είσοδος
+    layers.Input(shape=(IMG_HEIGHT, IMG_WIDTH, 1)),
+    layers.Rescaling(1./255),
+    data_augmentation,
+
+    # Block 1 (64 φίλτρα)
+    layers.Conv2D(64, (3, 3), padding='same'),
+    layers.BatchNormalization(),
+    layers.Activation('relu'),
+    layers.Conv2D(64, (3, 3), padding='same'),
+    layers.BatchNormalization(),
+    layers.Activation('relu'),
+    layers.MaxPooling2D((2, 2)),
+    layers.Dropout(0.25),
+
+    # Block 2 (128 φίλτρα)
+    layers.Conv2D(128, (3, 3), padding='same'),
+    layers.BatchNormalization(),
+    layers.Activation('relu'),
+    layers.Conv2D(128, (3, 3), padding='same'),
+    layers.BatchNormalization(),
+    layers.Activation('relu'),
+    layers.MaxPooling2D((2, 2)),
+    layers.Dropout(0.25),
+
+    # Block 3 (256 φίλτρα)
+    layers.Conv2D(256, (3, 3), padding='same'),
+    layers.BatchNormalization(),
+    layers.Activation('relu'),
+    layers.Conv2D(256, (3, 3), padding='same'),
+    layers.BatchNormalization(),
+    layers.Activation('relu'),
+    layers.MaxPooling2D((2, 2)),
+    layers.Dropout(0.25),
+
+    # Block 4 (512 φίλτρα)
+    layers.Conv2D(512, (3, 3), padding='same'),
+    layers.BatchNormalization(),
+    layers.Activation('relu'),
+    layers.Conv2D(512, (3, 3), padding='same'),
+    layers.BatchNormalization(),
+    layers.Activation('relu'),
+    layers.MaxPooling2D((2, 2)),
+    layers.Dropout(0.25),
+
+    # Στάδιο απόφασης
+    layers.Flatten(),
+    layers.Dense(512),
+    layers.BatchNormalization(),
+    layers.Activation('relu'),
+    layers.Dropout(0.5),
+
+    # Έξοδος για τα 7 συναισθήματα
+    layers.Dense(7, activation='softmax')
+])
+
+# 4. Μεταγλώττιση και callbacks
 model.compile(
-    optimizer='adam',
+    optimizer=keras.optimizers.Adam(learning_rate=0.001), # όρισα ρυθμός μάθησης για να ανεβεί το accuracy
     loss='categorical_crossentropy',
     metrics=['accuracy']
 )
 
-print("Beginning training...")
-epochs = 30
+# Callbacks για προσαρμογή της ταχύτητας μάθησης αν σταματήσει να βελτιώνεται η ακρίβεια
+lr_reduction = keras.callbacks.ReduceLROnPlateau(
+    monitor='val_accuracy',
+    patience=3,
+    verbose=1,
+    factor=0.5,
+    min_lr=0.00001
+)
 
+# 5. Εκπαίδευση
+
+epochs = 40 # Τις αύξησα εφόσον το δίκτυο είναι πιο βαθύ πλέον
+
+print("Beginning training...")
 model.fit(
     train_ds,
     validation_data=test_ds,
-    epochs=epochs
+    epochs=epochs,
+    callbacks=[lr_reduction]
 )
 
 # Αποθήκευση του μοντέλου
