@@ -10,7 +10,7 @@ model = load_model('emotion_model.h5')
 
 # Έλεγχος των καναλιών που περιμένει το μοντέλο (1 ή 3)
 input_channels = model.input_shape[-1]
-print(f"Το μοντέλο φορτώθηκε! Περιμένει εισόδους με {input_channels} κανάλι(α) χρώματος.")
+print(f"The model has been loaded! Awaiting input with {input_channels} color channels.")
 
 # 2. Αλφαβητική σειρά συναισθημάτων (όπως ταξινομούνται από την TensorFlow)
 emotion_labels = ['Angry', 'Disgust', 'Fear', 'Happy', 'Neutral', 'Sad', 'Surprise']
@@ -20,12 +20,12 @@ face_classifier = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_fro
 
 # 4. Έναρξη της κάμερας
 cap = cv2.VideoCapture(0)
-print("Η κάμερα ενεργοποιήθηκε! Πιέστε 'q' στο παράθυρο της κάμερας για να τερματίσετε τη δοκιμή.")
+print("The camera has been activated! Press 'q' inside the window to end the test.")
 
 while True:
     ret, frame = cap.read()
     if not ret:
-        print("Αδυναμία σύνδεσης με την κάμερα.")
+        print("Can't connect.")
         break
 
     # Μετατροπή σε ασπρόμαυρη εικόνα για τον εντοπισμό προσώπου
@@ -36,7 +36,7 @@ while True:
         # Σχεδιασμός πλαισίου γύρω από το πρόσωπο
         cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 0, 0), 2)
 
-        # 1. Αποκοπή της περιοχής του προσώπου (από την έγχρωμη BGR εικόνα)
+        # 1. Αποκοπή της περιοχής του προσώπου
         roi_color = frame[y:y+h, x:x+w]
 
         # 2. Μετατροπή BGR -> RGB (όπως εκπαιδεύτηκε η TensorFlow)
@@ -45,11 +45,10 @@ while True:
         # 3. Προσαρμογή μεγέθους σε 48x48 pixels
         roi_resized = cv2.resize(roi_rgb, (48, 48), interpolation=cv2.INTER_AREA)
 
-        # 4. Μετατροπή σε float32 ΧΩΡΙΣ διαίρεση με το 255.0 
-        # (Το μοντέλο περιέχει ήδη το Rescaling(1./255) εσωτερικά!)
+        # 4. Μετατροπή σε float32
         roi = roi_resized.astype('float32')
 
-        # 5. Προσαρμογή καναλιών αν το μοντέλο εκπαιδεύτηκε σε Grayscale (1 κανάλι)
+        # 5. Προσαρμογή καναλιών αν το μοντέλο εκπαιδεύτηκε σε Grayscale
         if input_channels == 1:
             roi = cv2.cvtColor(roi_resized, cv2.COLOR_RGB2GRAY)
             roi = np.expand_dims(roi, axis=-1)
@@ -62,7 +61,7 @@ while True:
         label = emotion_labels[max_index]
         confidence = prediction[0][max_index] * 100
 
-        # Εκτύπωση αποτελεσμάτων για επιβεβαίωση
+        # Εκτύπωση αποτελεσμάτων στο terminal για testing
         print(f"Πρόβλεψη: {label} ({confidence:.1f}%) | Raw: {np.round(prediction[0], 2)}")
 
         # Εμφάνιση συναισθήματος πάνω από το πλαίσιο
