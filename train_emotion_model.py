@@ -1,15 +1,11 @@
-import pandas as pd
-import numpy as np
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' # Κρύβει τα warnings του TensorFlow
+
 import tensorflow as tf
 from tensorflow import keras
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout
-from tensorflow.keras.utils import to_categorical
-from sklearn.model_selection import train_test_split
-from tensorflow.keras import layers, models
+from tensorflow.keras import layers
 
 # 1. Φόρτωση δεδομένων από τους φακέλους
-
 IMG_HEIGHT = 48
 IMG_WIDTH = 48
 BATCH_SIZE = 64
@@ -32,6 +28,11 @@ test_ds = tf.keras.utils.image_dataset_from_directory(
     label_mode='categorical'
 )
 
+# Επιτάχυνση ροής δεδομένων στη μνήμη
+AUTOTUNE = tf.data.AUTOTUNE
+train_ds = train_ds.prefetch(buffer_size=AUTOTUNE)
+test_ds = test_ds.prefetch(buffer_size=AUTOTUNE)
+
 # 2. Data augmentation
 data_augmentation = keras.Sequential([
     layers.RandomFlip("horizontal"), # καθέφτρισμα εικόνας
@@ -39,9 +40,8 @@ data_augmentation = keras.Sequential([
     layers.RandomZoom(0.1), # zoom in / zoom out έως 10%
 ])
 
-# 3. Χτίσιμο του custom CNN (4 conv blocks)
+# 3. Custom 4-Block CNN
 model = keras.Sequential([
-    # Είσοδος
     layers.Input(shape=(IMG_HEIGHT, IMG_WIDTH, 1)),
     layers.Rescaling(1./255),
     data_augmentation,
@@ -54,7 +54,7 @@ model = keras.Sequential([
     layers.BatchNormalization(),
     layers.Activation('relu'),
     layers.MaxPooling2D((2, 2)),
-    layers.Dropout(0.25),
+    layers.Dropout(0.2),
 
     # Block 2 (128 φίλτρα)
     layers.Conv2D(128, (3, 3), padding='same'),
@@ -84,27 +84,25 @@ model = keras.Sequential([
     layers.BatchNormalization(),
     layers.Activation('relu'),
     layers.MaxPooling2D((2, 2)),
-    layers.Dropout(0.25),
+    layers.Dropout(0.3),
 
     # Στάδιο απόφασης
     layers.Flatten(),
     layers.Dense(512),
     layers.BatchNormalization(),
     layers.Activation('relu'),
-    layers.Dropout(0.5),
-
-    # Έξοδος για τα 7 συναισθήματα
+    layers.Dropout(0.4),
     layers.Dense(7, activation='softmax')
 ])
 
-# 4. Μεταγλώττιση και callbacks
+# 4. Μεταγλώττιση και Callbacks
 model.compile(
-    optimizer=keras.optimizers.Adam(learning_rate=0.001), # όρισα ρυθμός μάθησης για να ανεβεί το accuracy
+    optimizer=keras.optimizers.Adam(learning_rate=0.001), # όρισα ρυθμό μάθησης για να ανεβεί το accuracy
     loss='categorical_crossentropy',
     metrics=['accuracy']
 )
 
-# Callbacks για προσαρμογή της ταχύτητας μάθησης αν σταματήσει να βελτιώνεται η ακρίβεια
+# Callback για να μειώνεται δυναμικά το Learning Rate
 lr_reduction = keras.callbacks.ReduceLROnPlateau(
     monitor='val_accuracy',
     patience=3,
@@ -114,17 +112,15 @@ lr_reduction = keras.callbacks.ReduceLROnPlateau(
 )
 
 # 5. Εκπαίδευση
-
-epochs = 40 # Τις αύξησα εφόσον το δίκτυο είναι πιο βαθύ πλέον
-
-print("Beginning training...")
-model.fit(
+epochs = 40
+print("Begining training on the 4-Block CNN...")
+history = model.fit(
     train_ds,
-    validation_data=test_ds,
-    epochs=epochs,
-    callbacks=[lr_reduction]
+    validation_data = test_ds,
+    epochs = epochs,
+    callbacks = [lr_reduction]
 )
 
-# Αποθήκευση του μοντέλου
+# 6. Αποθήκευση μοντέλου
 model.save('emotion_model.h5')
-print("The model has been succesfully saved as 'emotion_model.h5'!")
+print("\nThe Model has been saved successfully as 'emotion_model.h5'!")
