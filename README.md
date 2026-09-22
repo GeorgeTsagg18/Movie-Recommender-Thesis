@@ -124,7 +124,4 @@ Movie-Recommender-Thesis/
 
 ---
 
-## 👤 Author
 
-**George Tsagkarakis**
-[GitHub](https://github.com/GeorgeTsagg18) · [Upwork](https://www.upwork.com/freelancers/~0193d0fe5d3fd14798) · [Email](mailto:georgetsag18@gmail.com)
