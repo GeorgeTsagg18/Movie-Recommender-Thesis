@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MoodFlix | Προτάσεις Ταινιών βάσει Συναισθημάτων</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <header class="app-header">
+        <div class="container header-container">
+            <div class="logo-box">
+                <span class="logo-icon">🎬</span>
+                <div>
+                    <h1 class="logo-title">MoodFlix</h1>
+                    <p class="logo-subtitle">Emotion-Driven Movie Recommender</p>
+                </div>
+            </div>
+            <div class="header-badges">
+                <span class="badge badge-ai">⚡ CNN FER-2013</span>
+                <span class="badge badge-rec">🍿 MovieLens Recommender</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="container main-content">
+        <!-- Ενότητα Κάμερας & Επιλογής Στρατηγικής -->
+        <section class="control-grid">
+            <div class="card camera-card">
+                <div class="card-header">
+                    <h2>📷 Ανίχνευση μέσω Κάμερας</h2>
+                    <span id="camera-status" class="status-indicator">Αναμονή...</span>
+                </div>
+                
+                <div class="video-wrapper">
+                    <video id="webcam" autoplay playsinline muted></video>
+                    <canvas id="snapshot-canvas" style="display: none;"></canvas>
+                    <div id="camera-placeholder" class="camera-placeholder">
+                        <span class="placeholder-icon">📹</span>
+                        <p>Πάτα "Έναρξη Κάμερας" για να ξεκινήσεις</p>
+                    </div>
+                    <div id="scan-overlay" class="scan-overlay" style="display: none;">
+                        <div class="scanner-line"></div>
+                    </div>
+                </div>
+
+                <div class="camera-controls">
+                    <button id="btn-toggle-camera" class="btn btn-secondary">
+                        <span class="btn-icon">▶️</span> Έναρξη Κάμερας
+                    </button>
+                    <button id="btn-capture" class="btn btn-primary" disabled>
+                        <span class="btn-icon">⚡</span> Ανάλυση Διάθεσης
+                    </button>
+                </div>
+
+                <!-- Επιλογή Στρατηγικής Συστάσεων -->
+                <div class="strategy-selector">
+                    <label class="selector-label">🎯 Στρατηγική Συστάσεων:</label>
+                    <div class="radio-group">
+                        <label class="radio-label">
+                            <input type="radio" name="strategy" value="booster" checked>
+                            <span class="radio-custom"></span>
+                            <div>
+                                <strong>🚀 Mood Booster (Ανύψωση)</strong>
+                                <small>Φτιάξε μου τη διάθεση με χαρούμενες & feel-good ταινίες</small>
+                            </div>
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="strategy" value="mirror">
+                            <span class="radio-custom"></span>
+                            <div>
+                                <strong>🎭 Mood Mirror (Ταίριασμα)</strong>
+                                <small>Βρες ταινίες που ταιριάζουν ακριβώς στο πώς νιώθω</small>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Εναλλακτική: Χειροκίνητη Επιλογή -->
+                <div class="manual-fallback">
+                    <p class="fallback-title">Ή διάλεξε απευθείας συναίσθημα:</p>
+                    <div class="emotion-quick-select">
+                        <button class="btn-emo" data-emo="Happy">😄 Χαρά</button>
+                        <button class="btn-emo" data-emo="Sad">😢 Λύπη</button>
+                        <button class="btn-emo" data-emo="Angry">😠 Θυμός</button>
+                        <button class="btn-emo" data-emo="Surprise">😲 Έκπληξη</button>
+                        <button class="btn-emo" data-emo="Fear">😨 Φόβος</button>
+                        <button class="btn-emo" data-emo="Neutral">😐 Ουδέτερο</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ενότητα Αποτελεσμάτων Συναισθήματος -->
+            <div class="card result-card">
+                <div class="card-header">
+                    <h2>🧠 Ανάλυση Συναισθήματος</h2>
+                </div>
+
+                <div id="emotion-display" class="emotion-display">
+                    <div class="placeholder-state">
+                        <span class="big-emoji">🎭</span>
+                        <h3>Καμία ανάλυση ακόμα</h3>
+                        <p>Κοίταξε στην κάμερα και πάτα <strong>"Ανάλυση Διάθεσης"</strong> για να ξεκλειδώσεις τις προτάσεις σου!</p>
+                    </div>
+
+                    <div id="active-emotion" class="active-emotion" style="display: none;">
+                        <div class="dominant-emotion-box">
+                            <span id="dominant-emoji" class="dominant-emoji">😄</span>
+                            <div class="dominant-details">
+                                <span class="detected-label">ΚΥΡΙΑΡΧΟ ΣΥΝΑΙΣΘΗΜΑ</span>
+                                <h3 id="dominant-name">Χαρά (Happy)</h3>
+                                <div class="confidence-pill">
+                                    Αυτοπεποίθηση: <strong id="dominant-conf">94.5%</strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Ανάλυση όλων των συναισθημάτων (Breakdown) -->
+                        <div class="breakdown-container">
+                            <h4>Κατανομή Πιθανοτήτων (Softmax):</h4>
+                            <div id="breakdown-list" class="breakdown-list">
+                                <!-- Συμπληρώνεται δυναμικά από JS -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Ενότητα Προτεινόμενων Ταινιών -->
+        <section id="recommendations-section" class="recommendations-section" style="display: none;">
+            <div class="section-header">
+                <div>
+                    <h2 class="section-title">🍿 Προτεινόμενες Ταινίες για Εσένα</h2>
+                    <p id="section-subtitle" class="section-subtitle">Βασισμένες στη διάθεσή σου και τον αλγόριθμο MovieLens Weighted Rating</p>
+                </div>
+                <button id="btn-refresh-movies" class="btn btn-secondary">
+                    <span>🔄</span> Νέες Προτάσεις
+                </button>
+            </div>
+
+            <div id="movies-grid" class="movies-grid">
+                <!-- Συμπληρώνεται δυναμικά από JS -->
+            </div>
+        </section>
+    </main>
+
+    <footer class="app-footer">
+        <div class="container footer-content">
+            <p>🎓 Πτυχιακή Εργασία: <strong>Emotion-Based Movie Recommendation System</strong></p>
+            <p>Powered by TensorFlow CNN, OpenCV, MovieLens & Flask</p>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
+
