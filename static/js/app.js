@@ -250,9 +250,6 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
             moviesGrid.appendChild(card);
         });
-
-        // Ομαλό scroll προς τις προτάσεις
-        recSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 });
 
